@@ -39,7 +39,7 @@
         .img-resize-handle { position: absolute; bottom: -5px; right: -5px; width: 12px; height: 12px; background: #a6857e; border-radius: 2px; cursor: se-resize; }
         #sb-plan { position: relative; }
         .toolbar-btn { display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid #e5e3df; background: white; color: #aaa; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
-        .size-slider { -webkit-appearance: none; appearance: none; height: 3px; border-radius: 2px; background: #e0d8cf; outline: none; opacity: 0.4; transition: opacity 0.2s; cursor: pointer; overflow: hidden; }
+        .size-slider { -webkit-appearance: none; appearance: none; height: 3px; border-radius: 2px; background: #e0d8cf; outline: none; opacity: 0.4; transition: opacity 0.2s; cursor: pointer; }
         .size-slider:hover { opacity: 1; }
         .size-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; border-radius: 50%; background: #F5F5DC; border: 2px solid #F5F5DC; cursor: pointer; }
         .size-slider::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: #F5F5DC; border: 2px solid #F5F5DC; cursor: pointer; }
@@ -112,14 +112,14 @@
                 <div class="border-t border-gray-100 bg-[#faf9f8] px-6 py-3 flex items-center gap-3">
                     <!-- Text formatting -->
                     <button onclick="document.execCommand('bold')" title="Fet (Ctrl+B)" id="bold-btn" class="toolbar-btn w-7 h-7 font-bold text-sm">B</button>
-                    <button onclick="document.execCommand('italic')" title="Kursiv (Ctrl+I)" id="italic-btn" class="toolbar-btn w-7 h-7 italic text-sm">I</button>
+                    <button onclick="document.execCommand('italic')" title="Kursiv (Ctrl+I)" id="italic-btn" class="toolbar-btn w-7 h-7 text-sm">/</button>
                     <div class="w-px h-5 bg-gray-200 mx-1"></div>
                     <!-- Font size -->
                     <input type="range" min="16" max="80" value="32" title="Textstorlek" class="w-24 size-slider" style="accent-color: #F5F5DC;" oninput="updateFontSize(this.value)">
                     <div class="w-px h-5 bg-gray-200 mx-1"></div>
                     <!-- Image -->
                     <button onclick="document.getElementById('image-upload').click()" title="Lägg till bild" class="toolbar-btn w-7 h-7 text-base">🖼</button>
-                    <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="insertImageFromFile(this)">
+                    <input type="file" id="image-upload" accept="image/*" class="hidden" style="display:none" onchange="insertImageFromFile(this)">
                     <!-- Split -->
                     <button id="split-btn" onclick="toggleSplit()" title="Dela i två kolumner" class="toolbar-btn w-7 h-7 text-xs">⬜⬜</button>
                     <div class="flex-1"></div>
