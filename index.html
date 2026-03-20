@@ -54,8 +54,6 @@
         .notes-modal-content { background: white; border-radius: 16px; padding: 24px; width: 480px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         .private-notes-area { width: 100%; min-height: 200px; resize: vertical; border: 1px solid #e5e3df; border-radius: 8px; padding: 12px; font-size: 13px; outline: none; font-family: 'Inter', sans-serif; color: #444; background: #fdfcfb; }
         .private-notes-area:focus { border-color: #a6857e; background: white; }
-        .tool-resizable-container { resize: both; overflow: hidden; min-width: 160px; min-height: 100px; position: relative; display: block; }
-        .tool-inner-scaler { transform-origin: top left; display: inline-block; }
 
 #toolbar-toggle-btn {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -232,7 +230,6 @@ let stopwatchInterval = null;
 let stopwatchElapsed = 0;
 let isSplitActive = false;
 let currentFileHandle = null;
-let activeToolObserver = null;
 
 /* ================================================
    3. UTILITY FUNCTIONS
@@ -923,8 +920,8 @@ function openTool(type) {
     const content = document.getElementById('tool-content');
     const title = document.getElementById('tool-title');
     container.classList.remove('hidden-tool');
-    if (type === 'multiplication') { title.innerText = "Multiplikation"; content.innerHTML = generateMultiTable(); setTimeout(() => setupToolScaling('multi-container', 'multi-scaler'), 0); }
-    else if (type === 'fractions') { title.innerText = "Bråkplank"; content.innerHTML = generateFractionBoard(); setTimeout(() => setupToolScaling('frac-container', 'frac-scaler'), 0); }
+    if (type === 'multiplication') { title.innerText = "Multiplikation"; content.innerHTML = generateMultiTable(); }
+    else if (type === 'fractions') { title.innerText = "Bråkplank"; content.innerHTML = generateFractionBoard(); }
     else if (type === 'timer') { title.innerText = "Time Timer"; content.innerHTML = generateTimerUI(); setTimeout(initTimerFace, 10); resetTimer(); }
     else if (type === 'stopwatch') { title.innerText = "Stoppur"; content.innerHTML = generateStopwatchUI(); resetStopwatch(); }
 }
@@ -935,32 +932,29 @@ function closeTool() {
     timerInterval = null;
     clearInterval(stopwatchInterval);
     stopwatchInterval = null;
-    if (activeToolObserver) { activeToolObserver.disconnect(); activeToolObserver = null; }
 }
 
 function generateMultiTable() {
-    let tableHtml = '<table class="text-center border-collapse text-[10px]"><tr class="bg-gray-100"><td class="p-2 border font-bold">×</td>';
-    for (let i = 1; i <= 10; i++) tableHtml += `<td class="p-2 border font-bold bg-gray-50">${i}</td>`;
-    tableHtml += '</tr>';
+    let html = '<table class="w-full text-center border-collapse text-[10px]"><tr class="bg-gray-100"><td class="p-2 border font-bold">×</td>';
+    for (let i = 1; i <= 10; i++) html += `<td class="p-2 border font-bold bg-gray-50">${i}</td>`;
+    html += '</tr>';
     for (let i = 1; i <= 10; i++) {
-        tableHtml += `<tr><td class="bg-gray-50 p-2 border font-bold">${i}</td>`;
-        for (let j = 1; j <= 10; j++) tableHtml += `<td class="p-2 border hover:bg-[#a6857e]/10 cursor-default">${i * j}</td>`;
-        tableHtml += '</tr>';
+        html += `<tr><td class="bg-gray-50 p-2 border font-bold">${i}</td>`;
+        for (let j = 1; j <= 10; j++) html += `<td class="p-2 border hover:bg-[#a6857e]/10 cursor-default">${i * j}</td>`;
+        html += '</tr>';
     }
-    tableHtml += '</table>';
-    return `<div id="multi-container" class="tool-resizable-container"><div id="multi-scaler" class="tool-inner-scaler">${tableHtml}</div></div>`;
+    return html + '</table>';
 }
 
 function generateFractionBoard() {
     const colors = ['bg-blue-400', 'bg-red-400', 'bg-green-400', 'bg-yellow-400', 'bg-purple-400', 'bg-orange-400', 'bg-teal-400', 'bg-pink-400'];
-    let innerHtml = '<div class="space-y-2 py-2">';
+    let html = '<div class="space-y-2 py-2">';
     for (let i = 1; i <= 8; i++) {
-        innerHtml += `<div class="flex h-9 w-full rounded overflow-hidden shadow-sm border border-gray-100">`;
-        for (let j = 0; j < i; j++) innerHtml += `<div class="flex-1 ${colors[i - 1]} border-r border-white/20 last:border-0 flex items-center justify-center text-white text-[9px] font-bold">1/${i}</div>`;
-        innerHtml += `</div>`;
+        html += `<div class="flex h-9 w-full rounded overflow-hidden shadow-sm border border-gray-100">`;
+        for (let j = 0; j < i; j++) html += `<div class="flex-1 ${colors[i - 1]} border-r border-white/20 last:border-0 flex items-center justify-center text-white text-[9px] font-bold">1/${i}</div>`;
+        html += `</div>`;
     }
-    innerHtml += '</div>';
-    return `<div id="frac-container" class="tool-resizable-container"><div id="frac-scaler" class="tool-inner-scaler" style="width:240px">${innerHtml}</div></div>`;
+    return html + '</div>';
 }
 
 function generateTimerUI() {
@@ -1059,25 +1053,6 @@ function updateStopwatchDisplay() {
     const secs = Math.floor((stopwatchElapsed % 60000) / 1000);
     const cs = Math.floor((stopwatchElapsed % 1000) / 10);
     display.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${cs.toString().padStart(2, '0')}`;
-}
-
-function setupToolScaling(containerId, scalerId) {
-    if (activeToolObserver) { activeToolObserver.disconnect(); activeToolObserver = null; }
-    const container = document.getElementById(containerId);
-    const scaler = document.getElementById(scalerId);
-    if (!container || !scaler) return;
-    const naturalWidth = scaler.offsetWidth;
-    const naturalHeight = scaler.offsetHeight;
-    if (!naturalWidth || !naturalHeight) return;
-    container.style.width = naturalWidth + 'px';
-    container.style.height = naturalHeight + 'px';
-    activeToolObserver = new ResizeObserver(() => {
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        const scale = Math.min(containerWidth / naturalWidth, containerHeight / naturalHeight);
-        scaler.style.transform = 'scale(' + scale + ')';
-    });
-    activeToolObserver.observe(container);
 }
 
 function initPanelResize() {
