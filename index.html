@@ -249,7 +249,7 @@ let timerInterval = null;
 let timerSeconds = 0;
 let timerMaxSeconds = 600;
 let stopwatchInterval = null;
-let stopwatchCentiseconds = 0;
+let stopwatchSeconds = 0;
 let stopwatchRunning = false;
 let isSplitActive = false;
 let currentFileHandle = null;
@@ -1042,7 +1042,7 @@ function polarToCartesian(cx, cy, r, angleDeg) {
 
 function generateStopwatchUI() {
     return `<div class="text-center p-2" style="min-width:220px">
-        <div id="sw-display" style="font-family:'Courier New',Courier,monospace;font-size:2.8rem;font-weight:bold;letter-spacing:0.08em;color:#374151;background:#f9fafb;border:2px solid #e5e7eb;border-radius:12px;padding:14px 20px;margin-bottom:18px;display:inline-block;min-width:210px;">00:00.00</div>
+        <div id="sw-display" style="font-family:'Courier New',Courier,monospace;font-size:2.8rem;font-weight:bold;letter-spacing:0.08em;color:#374151;background:#f9fafb;border:2px solid #e5e7eb;border-radius:12px;padding:14px 20px;margin-bottom:18px;display:inline-block;min-width:210px;">00:00</div>
         <div class="flex gap-2 justify-center">
             <button id="sw-start-btn" onclick="startStopwatch()" style="background:#16a34a;color:white;padding:8px 20px;border-radius:8px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.15);transition:opacity 0.15s">Start</button>
             <button onclick="pauseStopwatch()" style="background:#dc2626;color:white;padding:8px 20px;border-radius:8px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.15)">Paus</button>
@@ -1056,11 +1056,11 @@ function startStopwatch() {
     stopwatchRunning = true;
     const btn = document.getElementById('sw-start-btn');
     if (btn) { btn.style.opacity = '0.6'; btn.style.cursor = 'default'; }
-    const startTime = Date.now() - stopwatchCentiseconds * 10;
+    const startTime = Date.now() - stopwatchSeconds * 1000;
     stopwatchInterval = setInterval(() => {
-        stopwatchCentiseconds = Math.floor((Date.now() - startTime) / 10);
+        stopwatchSeconds = Math.floor((Date.now() - startTime) / 1000);
         updateStopwatchDisplay();
-    }, 10);
+    }, 1000);
 }
 
 function pauseStopwatch() {
@@ -1074,18 +1074,16 @@ function pauseStopwatch() {
 
 function resetStopwatch() {
     pauseStopwatch();
-    stopwatchCentiseconds = 0;
+    stopwatchSeconds = 0;
     updateStopwatchDisplay();
 }
 
 function updateStopwatchDisplay() {
     const display = document.getElementById('sw-display');
     if (!display) return;
-    const total = stopwatchCentiseconds;
-    const cs = total % 100;
-    const secs = Math.floor(total / 100) % 60;
-    const mins = Math.floor(total / 6000);
-    display.textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}.${cs.toString().padStart(2,'0')}`;
+    const mins = Math.floor(stopwatchSeconds / 60);
+    const secs = stopwatchSeconds % 60;
+    display.textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
 }
 
 /* ================================================
