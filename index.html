@@ -46,6 +46,11 @@
         .size-slider::-moz-range-thumb { width: 20px; height: 12px; border-radius: 6px; background: #C8B49A; border: none; cursor: pointer; }
         .toolbar-btn:hover { border-color: #a6857e; color: #a6857e; }
         .toolbar-btn.active { background: #a6857e; border-color: #a6857e; color: white; }
+        .notes-modal { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); }
+        .notes-modal.hidden { display: none; }
+        .notes-modal-content { background: white; border-radius: 16px; padding: 24px; width: 480px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .private-notes-area { width: 100%; min-height: 200px; resize: vertical; border: 1px solid #e5e3df; border-radius: 8px; padding: 12px; font-size: 13px; outline: none; font-family: 'Inter', sans-serif; color: #444; background: #fdfcfb; }
+        .private-notes-area:focus { border-color: #a6857e; background: white; }
 
 #toolbar-toggle-btn {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -114,6 +119,7 @@
                     <!-- Text formatting -->
                     <button onclick="document.execCommand('bold')" title="Fet (Ctrl+B)" id="bold-btn" class="toolbar-btn w-7 h-7 font-bold text-sm">B</button>
                     <button onclick="document.execCommand('italic')" title="Kursiv (Ctrl+I)" id="italic-btn" class="toolbar-btn w-7 h-7 text-sm">/</button>
+                    <button onclick="toggleNotesModal()" title="Privata lektionsanteckningar" id="notes-btn" class="toolbar-btn w-7 h-7 text-base">📝</button>
                     <div class="w-px h-5 bg-gray-200 mx-1"></div>
                     <!-- Font size -->
                     <input type="range" min="16" max="80" value="32" title="Textstorlek" class="w-14 size-slider" oninput="updateFontSize(this.value)">
@@ -166,6 +172,24 @@
         class="fixed bottom-6 right-6 w-14 h-14 bg-white rounded-3xl shadow-2xl border border-gray-200 flex items-center justify-center text-3xl z-[100] active:scale-95 transition-all hover:border-[#a6857e]">
     🛠️
 </button>
+
+<!-- Private lesson notes modal -->
+<div id="lesson-notes-modal" class="notes-modal hidden" onclick="handleNotesModalBackdrop(event)">
+    <div class="notes-modal-content" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="font-bold text-[#a6857e] uppercase text-xs tracking-widest">🔒 Privata lektionsanteckningar</h3>
+                <p id="notes-modal-lesson-name" class="text-sm text-gray-500 mt-1"></p>
+            </div>
+            <button onclick="closeNotesModal()" class="text-gray-400 hover:text-black font-bold text-xl leading-none">&times;</button>
+        </div>
+        <textarea id="private-notes-textarea" class="private-notes-area custom-scrollbar" placeholder="Skriv privata anteckningar för denna lektion... (syns bara för dig)"></textarea>
+        <div class="flex justify-between items-center mt-4">
+            <span class="text-[10px] text-gray-400 italic">🔒 Visas bara för läraren – ej i elevvy</span>
+            <button onclick="savePrivateNotes(); closeNotesModal();" class="bg-[#a6857e] text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#92756e] transition-all">Spara &amp; stäng</button>
+        </div>
+    </div>
+</div>
 
 <script>
 /* ================================================
@@ -266,7 +290,7 @@ function weekHasLessons(weekKey) {
 
 function ensureWeekExists() {
     const weekKey = `${currentYear}-W${currentWeek}`;
-    if (weekHasCustomContent(weekKey)) return;
+    if (weekHasLessons(weekKey)) return;
     let sourceKey = null;
     for (let i = 1; i <= 52; i++) {
         let prevW = currentWeek - i;
@@ -536,6 +560,7 @@ function renderDayDetail() {
                     if (delBtn) delBtn.onmousedown = (e) => { e.stopPropagation(); wrapper.remove(); handleInput(); };
                 });
             });
+            updateNotesButtonState(lesson);
         }
     });
     if (lessons.length === 0) {
@@ -543,6 +568,7 @@ function renderDayDetail() {
         document.getElementById('sb-time').innerText = "Klicka på '+ Ny lektion' för att börja";
         document.getElementById('sb-plan').innerHTML = "";
         activeLessonId = null;
+        updateNotesButtonState(null);
     }
 }
 
@@ -624,6 +650,58 @@ function saveDayNote(dayIdx, value) {
     if (!plannerData[weekKey].dayNotes) plannerData[weekKey].dayNotes = ["", "", "", "", ""];
     plannerData[weekKey].dayNotes[dayIdx] = value;
     saveData(); // now async but fire-and-forget is fine
+}
+
+function toggleNotesModal() {
+    const modal = document.getElementById('lesson-notes-modal');
+    if (modal.classList.contains('hidden')) {
+        openNotesModal();
+    } else {
+        closeNotesModal();
+    }
+}
+
+function openNotesModal() {
+    if (!activeLessonId) return;
+    const weekKey = `${currentYear}-W${currentWeek}`;
+    const lesson = (plannerData[weekKey] && plannerData[weekKey].lessons[activeDayIndex] || []).find(l => l.id === activeLessonId);
+    if (!lesson) return;
+    document.getElementById('notes-modal-lesson-name').innerText = lesson.subject + ' – ' + lesson.time;
+    document.getElementById('private-notes-textarea').value = lesson.privateNotes || '';
+    document.getElementById('lesson-notes-modal').classList.remove('hidden');
+    document.getElementById('private-notes-textarea').focus();
+}
+
+function closeNotesModal() {
+    savePrivateNotes();
+    document.getElementById('lesson-notes-modal').classList.add('hidden');
+}
+
+function handleNotesModalBackdrop(event) {
+    if (event.target === document.getElementById('lesson-notes-modal')) {
+        closeNotesModal();
+    }
+}
+
+function savePrivateNotes() {
+    if (!activeLessonId) return;
+    const weekKey = `${currentYear}-W${currentWeek}`;
+    const lesson = (plannerData[weekKey] && plannerData[weekKey].lessons[activeDayIndex] || []).find(l => l.id === activeLessonId);
+    if (lesson) {
+        lesson.privateNotes = document.getElementById('private-notes-textarea').value;
+        saveData();
+        updateNotesButtonState(lesson);
+    }
+}
+
+function updateNotesButtonState(lesson) {
+    const notesBtn = document.getElementById('notes-btn');
+    if (!notesBtn) return;
+    if (lesson?.privateNotes?.trim()) {
+        notesBtn.classList.add('active');
+    } else {
+        notesBtn.classList.remove('active');
+    }
 }
 
 function addLessonPrompt() {
@@ -982,6 +1060,16 @@ window.onload = () => {
     document.getElementById('bottom-toolbar').style.display = 'none';
 
     updateFileStatus('localStorage (ingen diskfil kopplad)');
+
+    // Close lesson-notes modal on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('lesson-notes-modal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closeNotesModal();
+            }
+        }
+    });
 };
 </script>
 </body>
